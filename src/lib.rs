@@ -90,14 +90,21 @@ impl<T: Float + Signed + FromPrimitive + CanRepresentPi> STFT<T> {
         }
     }
 
+    #[inline]
     pub fn output_size(&self) -> usize {
         self.window_size / 2
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.sample_ring.len()
     }
 
     pub fn feed(&mut self, input: &[T]) {
         self.sample_ring.push_many_back(input);
     }
 
+    #[inline]
     pub fn can_compute(&self) -> bool {
         self.window_size <= self.sample_ring.len()
     }
