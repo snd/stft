@@ -1,6 +1,6 @@
 # STFT
 
-*work in progress*
+*early work in progress*
 
 [![Build Status](https://travis-ci.org/snd/stft.svg?branch=master)](https://travis-ci.org/snd/stft/branches)
 [![](https://meritbadge.herokuapp.com/stft)](https://crates.io/crates/stft)
