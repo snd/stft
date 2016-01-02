@@ -58,18 +58,16 @@ impl<T: Float + Signed + FromPrimitive + CanRepresentPi> STFT<T> {
 
     pub fn new(window_type: WindowType,
                window_size: usize,
-               step_size: usize,
-               zero_padding: usize)
+               step_size: usize)
                -> STFT<T> {
         let window = STFT::window_type_to_window_vec(window_type, window_size);
-        STFT::<T>::new_with_window(window, window_size, step_size, zero_padding)
+        STFT::<T>::new_with_window(window, window_size, step_size)
     }
 
     // TODO this should ideally take an iterator and not a vec
     pub fn new_with_window(window: Option<Vec<T>>,
                            window_size: usize,
-                           step_size: usize,
-                           zero_padding: usize)
+                           step_size: usize)
                            -> STFT<T> {
         // TODO more assertions:
         // window_size is power of two
