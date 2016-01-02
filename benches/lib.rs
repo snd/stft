@@ -51,13 +51,13 @@ macro_rules! bench_stft_compute {
 }
 
 #[bench]
-fn bench_stft_compute_1024_f64(bencher: &mut test::Bencher) {
-    bench_stft_compute!(bencher, 1024, f64);
+fn bench_stft_compute_1024_f32(bencher: &mut test::Bencher) {
+    bench_stft_compute!(bencher, 1024, f32);
 }
 
 #[bench]
-fn bench_stft_compute_1024_f32(bencher: &mut test::Bencher) {
-    bench_stft_compute!(bencher, 1024, f32);
+fn bench_stft_compute_1024_f64(bencher: &mut test::Bencher) {
+    bench_stft_compute!(bencher, 1024, f64);
 }
 
 // #[bench]
