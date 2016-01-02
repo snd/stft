@@ -40,7 +40,7 @@ fn bench_fft_process_1024_f64(bencher: &mut test::Bencher) {
 
 macro_rules! bench_stft_compute {
     ($bencher:expr, $window_size:expr, $float:ty) => {{
-        let mut stft = STFT::<$float>::new(WindowType::Hanning, $window_size, 0, 0);
+        let mut stft = STFT::<$float>::new(WindowType::Hanning, $window_size, 0);
         let input = std::iter::repeat(1.).take($window_size).collect::<Vec<$float>>();
         let mut output = std::iter::repeat(0.).take(stft.output_size()).collect::<Vec<$float>>();
         stft.feed(&input[..]);
