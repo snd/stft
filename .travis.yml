@@ -1,0 +1,27 @@
+sudo: true
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+script:
+  # travis default rust test script
+  - cargo build --verbose
+  - cargo test --verbose
+  # benches use the test feature which is only available on nightly
+  # run benches once per build to detect performance regressions
+  - if [ "$TRAVIS_RUST_VERSION" = "nightly" ] ; then
+     cargo bench --verbose;
+    fi
+env:
+  global:
+    - secure: "DK6r9AssAQ6o2U14tiAe9t+0qlW/J39IQVdCl7WcJprNyArq21wgKnJhvnWYzTMp9Swd0HcwdH9bFc1AMvGrXZORGA0wYeBjuZJvf94rBkm4FEkAQTFC1PPmM2sNwxb1O7NxS8GrDPDSLR3f2VcNiYv6Q0orNMyVAU0ecJN+KjsrRmAQ5Kp0fHoaiVKA9JBCD1JIwljA+O8Cld1VJ8CrA2HVhVsprG+2L2tF2tzn1nzyKeR9Rp+dNAxb2H37ViKhl2n5mMj7b4LB2kiJpnxRHUDMMwXdVzv72NGIsAkJKAOrUAVUIvVbxT4mSgAnIOlmbOB9JBy4t67YvubeByON2gnVGGwiFAecU85eEOW+a41eCWMgB1HXQ+2RjBdaQFTOPqkj/teoOLN8bOKh6DLxAMmBCfkENucSyccTim70UQWxsjHeJ3fwVWX04PHCTkMvY0gvDlcTf/fSWf7ScYpZs49RFXi1oGFvo/dLtzqPYlgjXBPCN5xlWK46bSZIIpG9BBsbXJIW9dQBriVpdlw+XnnYa5iEyN8VqwpNdnnFeKK9ai8fdQ5PDq+X2aopR8dK1AXGumM5oBg25pb3AT1gbf+FMjOLNXTUKCdXWLmNLsKX2qo1cdLnNDIZOd7RDScn2YzLuNJ+tuALNJt7qOtH4RaUszUXs+IT2v7dfYYqS44="
+# after success build rust documentation and push it to gh-pages branch
+# only do this for the stable branch (once per build)
+after_success: |
+  if [ "$TRAVIS_RUST_VERSION" = "stable" ] ; then
+    cargo doc --no-deps && \
+    sudo pip install ghp-import && \
+    ghp-import -n target/doc && \
+    git push -qf https://${GITHUB_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
+  fi
