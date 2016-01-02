@@ -1,9 +1,9 @@
 [package]
 authors = ["Maximilian Krüger <kruemaxi@gmail.com>"]
-description = "short-time fourier transform"
+description = "computes the short-time fourier transform on streaming data"
 documentation = "https://snd.github.io/stft/stft/index.html"
 homepage = "https://github.com/snd/stft"
-keywords = []
+keywords = ["dsp", "fft", "stream", "data", "fourier"]
 license = "MIT"
 name = "stft"
 readme = "README.md"
