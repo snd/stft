@@ -29,12 +29,11 @@ pub struct STFT<T> {
     pub complex_fft_output: Vec<Complex<T>>,
 }
 
-/// returns log10 of `value` or zero if the log10 of `value` is negative
-/// `log10` turns the values in range `0..1` into values
+/// returns zero if the `log10` of `value` is negative.
+/// otherwise returns `log10` of `value`.
+/// `log10` turns values in domain `0..1` into values
 /// in range `-inf..0`.
-/// `log10_positive` turns the values in range `0..1` into 0.
-/// for other value ranges the behaviour of `log10` and `log10_positive`
-/// is identical.
+/// `log10_positive` turns values in domain `0..1` into `0`.
 #[inline]
 pub fn log10_positive<T: Float + Signed + Zero>(value: T) -> T {
     // Float.log10
