@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 extern crate num;
 use num::complex::Complex;
 use num::traits::{Float, Signed, FromPrimitive, Zero};
@@ -31,12 +33,52 @@ pub fn log10_positive<T: Float + Signed + Zero>(value: T) -> T {
     }
 }
 
+/// the type of apodization window to use
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
 pub enum WindowType {
     Hanning,
     Hamming,
     Blackman,
     Nuttall,
     None,
+}
+
+impl FromStr for WindowType {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lower = s.to_lowercase();
+        match &lower[..] {
+            "hanning" => Ok(WindowType::Hanning),
+            "hann" => Ok(WindowType::Hanning),
+            "hamming" => Ok(WindowType::Hamming),
+            "blackman" => Ok(WindowType::Blackman),
+            "nuttall" => Ok(WindowType::Nuttall),
+            "none" => Ok(WindowType::None),
+            _ => Err("no match"),
+        }
+    }
+}
+
+// this also implements ToString::to_string
+impl std::fmt::Display for WindowType {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "{:?}", self)
+    }
+}
+
+// TODO write a macro that does this automatically for any enum
+static WINDOW_TYPES: [WindowType; 5] = [
+    WindowType::Hanning,
+    WindowType::Hamming,
+    WindowType::Blackman,
+    WindowType::Nuttall,
+    WindowType::None];
+
+impl WindowType {
+    pub fn values() -> [WindowType; 5] {
+        WINDOW_TYPES
+    }
 }
 
 pub struct STFT<T> {
