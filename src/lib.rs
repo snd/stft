@@ -124,7 +124,14 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
         // read into real_input
         self.sample_ring.read_many_front(&mut self.real_input[..]);
 
-        // copy real_input as real parts into complex_input
+        // multiply real_input with window
+        if let Some(ref window) = self.window {
+            for (dst, src) in self.real_input.iter_mut().zip(window.iter()) {
+                *dst = *dst * *src;
+            }
+        }
+
+        // copy windowed real_input as real parts into complex_input
         for (dst, src) in self.complex_input.iter_mut().zip(self.real_input.iter()) {
             dst.re = src.clone();
         }
