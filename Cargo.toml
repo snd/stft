@@ -8,7 +8,7 @@ license = "MIT"
 name = "stft"
 readme = "README.md"
 repository = "https://github.com/snd/stft.git"
-version = "0.1.2"
+version = "0.1.3"
 
 [dependencies]
 apodize = "0.1.1"
