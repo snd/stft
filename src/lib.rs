@@ -13,7 +13,7 @@ use strider::{SliceRing, SliceRingImpl};
 extern crate rustfft;
 use rustfft::FFT;
 
-/// returns zero if `log10(value).is_negative()`.
+/// returns `0` if `log10(value).is_negative()`.
 /// otherwise returns `log10(value)`.
 /// `log10` turns values in domain `0..1` into values
 /// in range `-inf..0`.
