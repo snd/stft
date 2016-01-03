@@ -1,5 +1,27 @@
+use std::str::FromStr;
+
 extern crate stft;
 use stft::{STFT, WindowType};
+
+#[test]
+fn test_window_type_from_string() {
+    assert_eq!(WindowType::from_str("Hanning").unwrap(), WindowType::Hanning);
+    assert_eq!(WindowType::from_str("hanning").unwrap(), WindowType::Hanning);
+    assert_eq!(WindowType::from_str("hann").unwrap(), WindowType::Hanning);
+    assert_eq!(WindowType::from_str("blackman").unwrap(), WindowType::Blackman);
+}
+
+#[test]
+fn test_window_type_to_string() {
+    assert_eq!(WindowType::Hanning.to_string(), "Hanning");
+}
+
+#[test]
+fn test_window_types_to_strings() {
+    assert_eq!(
+        vec!["Hanning", "Hamming", "Blackman", "Nuttall", "None"],
+        WindowType::values().iter().map(|x| x.to_string()).collect::<Vec<String>>());
+}
 
 #[test]
 fn test_log10_positive() {
