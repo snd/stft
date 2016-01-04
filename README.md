@@ -6,7 +6,7 @@
 [![](https://meritbadge.herokuapp.com/stft)](https://crates.io/crates/stft)
 
 **computes the [short-time fourier transform](https://en.wikipedia.org/wiki/Short-time_Fourier_transform)
-on streaming data**
+on streaming data. written in [rust](https://www.rust-lang.org/).**
 
 to use add `stft = "*"`
 to the `[dependencies]` section of your `Cargo.toml` and call `extern crate stft;` in your code.
