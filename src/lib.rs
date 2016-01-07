@@ -68,12 +68,11 @@ impl std::fmt::Display for WindowType {
 }
 
 // TODO write a macro that does this automatically for any enum
-static WINDOW_TYPES: [WindowType; 5] = [
-    WindowType::Hanning,
-    WindowType::Hamming,
-    WindowType::Blackman,
-    WindowType::Nuttall,
-    WindowType::None];
+static WINDOW_TYPES: [WindowType; 5] = [WindowType::Hanning,
+                                        WindowType::Hamming,
+                                        WindowType::Blackman,
+                                        WindowType::Nuttall,
+                                        WindowType::None];
 
 impl WindowType {
     pub fn values() -> [WindowType; 5] {
