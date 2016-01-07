@@ -85,6 +85,7 @@ pub struct STFT<T> {
     pub step_size: usize,
     pub fft: FFT<T>,
     pub window: Option<Vec<T>>,
+    /// internal ringbuffer used to store samples
     pub sample_ring: SliceRingImpl<T>,
     pub real_input: Vec<T>,
     pub complex_input: Vec<Complex<T>>,
@@ -94,51 +95,48 @@ pub struct STFT<T> {
 impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
     pub fn window_type_to_window_vec(window_type: WindowType,
                                      window_size: usize)
-        -> Option<Vec<T>> {
-            match window_type {
-                WindowType::Hanning => Some(apodize::hanning_iter(window_size).collect::<Vec<T>>()),
-                WindowType::Hamming => Some(apodize::hamming_iter(window_size).collect::<Vec<T>>()),
-                WindowType::Blackman => Some(apodize::blackman_iter(window_size).collect::<Vec<T>>()),
-                WindowType::Nuttall => Some(apodize::nuttall_iter(window_size).collect::<Vec<T>>()),
-                WindowType::None => None,
-            }
+                                     -> Option<Vec<T>> {
+        match window_type {
+            WindowType::Hanning => Some(apodize::hanning_iter(window_size).collect::<Vec<T>>()),
+            WindowType::Hamming => Some(apodize::hamming_iter(window_size).collect::<Vec<T>>()),
+            WindowType::Blackman => Some(apodize::blackman_iter(window_size).collect::<Vec<T>>()),
+            WindowType::Nuttall => Some(apodize::nuttall_iter(window_size).collect::<Vec<T>>()),
+            WindowType::None => None,
         }
+    }
 
-    pub fn new(window_type: WindowType,
-               window_size: usize,
-               step_size: usize)
-        -> STFT<T> {
-            let window = STFT::window_type_to_window_vec(window_type, window_size);
-            STFT::<T>::new_with_window(window, window_size, step_size)
-        }
+    pub fn new(window_type: WindowType, window_size: usize, step_size: usize) -> STFT<T> {
+        let window = STFT::window_type_to_window_vec(window_type, window_size);
+        STFT::<T>::new_with_window_vec(window, window_size, step_size)
+    }
 
     // TODO this should ideally take an iterator and not a vec
-    pub fn new_with_window(window: Option<Vec<T>>,
-                           window_size: usize,
-                           step_size: usize)
-        -> STFT<T> {
-            // TODO more assertions:
-            // window_size is power of two
-            // step_size > 0
-            assert!(step_size <= window_size);
-            let inverse = false;
-            STFT {
-                window_size: window_size,
-                step_size: step_size,
-                fft: FFT::new(window_size, inverse),
-                sample_ring: SliceRingImpl::new(),
-                window: window,
-                real_input: std::iter::repeat(T::zero())
-                    .take(window_size)
-                    .collect(),
-                complex_input: std::iter::repeat(Complex::<T>::zero())
-                    .take(window_size)
-                    .collect(),
-                complex_output: std::iter::repeat(Complex::<T>::zero())
-                    .take(window_size)
-                    .collect(),
-            }
+    pub fn new_with_window_vec(window: Option<Vec<T>>,
+                                  window_size: usize,
+                                  step_size: usize)
+                                  -> STFT<T> {
+        // TODO more assertions:
+        // window_size is power of two
+        // step_size > 0
+        assert!(step_size <= window_size);
+        let inverse = false;
+        STFT {
+            window_size: window_size,
+            step_size: step_size,
+            fft: FFT::new(window_size, inverse),
+            sample_ring: SliceRingImpl::new(),
+            window: window,
+            real_input: std::iter::repeat(T::zero())
+                            .take(window_size)
+                            .collect(),
+            complex_input: std::iter::repeat(Complex::<T>::zero())
+                               .take(window_size)
+                               .collect(),
+            complex_output: std::iter::repeat(Complex::<T>::zero())
+                                .take(window_size)
+                                .collect(),
         }
+    }
 
     #[inline]
     pub fn output_size(&self) -> usize {
@@ -150,17 +148,17 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
         self.sample_ring.len()
     }
 
-    pub fn feed(&mut self, input: &[T]) {
+    pub fn append_samples(&mut self, input: &[T]) {
         self.sample_ring.push_many_back(input);
     }
 
     #[inline]
-    pub fn can_compute(&self) -> bool {
+    pub fn contains_enough_to_compute(&self) -> bool {
         self.window_size <= self.sample_ring.len()
     }
 
     fn compute_into_complex_output(&mut self) {
-        assert!(self.can_compute());
+        assert!(self.contains_enough_to_compute());
 
         // read into real_input
         self.sample_ring.read_many_front(&mut self.real_input[..]);
@@ -181,10 +179,9 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
         self.fft.process(&self.complex_input, &mut self.complex_output);
     }
 
-    /// only half of it
     /// # Panics
     /// panics unless `self.output_size() == output.len()`
-    pub fn compute_complex(&mut self, output: &mut [Complex<T>]) {
+    pub fn compute_complex_column(&mut self, output: &mut [Complex<T>]) {
         assert_eq!(self.output_size(), output.len());
 
         self.compute_into_complex_output();
@@ -196,7 +193,7 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
 
     /// # Panics
     /// panics unless `self.output_size() == output.len()`
-    pub fn compute_magnitude(&mut self, output: &mut [T]) {
+    pub fn compute_magnitude_column(&mut self, output: &mut [T]) {
         assert_eq!(self.output_size(), output.len());
 
         self.compute_into_complex_output();
@@ -206,9 +203,10 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
         }
     }
 
+    /// computes a column of the spectrogram
     /// # Panics
     /// panics unless `self.output_size() == output.len()`
-    pub fn compute(&mut self, output: &mut [T]) {
+    pub fn compute_column(&mut self, output: &mut [T]) {
         assert_eq!(self.output_size(), output.len());
 
         self.compute_into_complex_output();
@@ -220,7 +218,7 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
 
     /// make a step
     /// drops `self.step_size` samples from the internal buffer `self.sample_ring`.
-    pub fn step(&mut self) {
+    pub fn move_to_next_column(&mut self) {
         self.sample_ring.drop_many_front(self.step_size);
     }
 }
