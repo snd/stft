@@ -4,6 +4,9 @@ rust:
   - stable
   - beta
   - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
 script:
   # travis default rust test script
   - cargo build --verbose
