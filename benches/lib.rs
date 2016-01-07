@@ -43,9 +43,9 @@ macro_rules! bench_stft_compute {
         let mut stft = STFT::<$float>::new(WindowType::Hanning, $window_size, 0);
         let input = std::iter::repeat(1.).take($window_size).collect::<Vec<$float>>();
         let mut output = std::iter::repeat(0.).take(stft.output_size()).collect::<Vec<$float>>();
-        stft.feed(&input[..]);
+        stft.append_samples(&input[..]);
         $bencher.iter(|| {
-            stft.compute(&mut output[..])
+            stft.compute_column(&mut output[..])
         });
     }}
 }
