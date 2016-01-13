@@ -12,4 +12,9 @@ are well written, documented and tested.
 **communicate !**  
 [write an issue](https://github.com/snd/stft/issues/new) to start a discussion before writing code that may or may not get merged.
 
-[This project adheres to the Contributor Covenant 1.2](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to kruemaxi@gmail.com.
+[this project adheres to the contributor covenant 1.2](CODE_OF_CONDUCT.md). by participating, you are expected to uphold this code. please report unacceptable behavior to kruemaxi@gmail.com.
+
+unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you, as defined in the [apache-2.0](LICENSE-APACHE)
+license, shall be dual licensed as above, without any additional terms or
+conditions.
