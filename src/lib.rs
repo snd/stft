@@ -72,7 +72,7 @@ extern crate strider;
 use strider::{SliceRing, SliceRingImpl};
 
 extern crate rustfft;
-use rustfft::{FFTplanner,FFT};
+use rustfft::{FFT,FFTnum,FFTplanner};
 
 /// returns `0` if `log10(value).is_negative()`.
 /// otherwise returns `log10(value)`.
@@ -141,27 +141,31 @@ impl WindowType {
     }
 }
 
-pub struct STFT {
+pub struct STFT<T>
+    where T: FFTnum + FromF64 + num::Float
+{
     pub window_size: usize,
     pub step_size: usize,
-    pub fft: Arc<FFT<f64>>,
-    pub window: Option<Vec<f64>>,
+    pub fft: Arc<FFT<T>>,
+    pub window: Option<Vec<T>>,
     /// internal ringbuffer used to store samples
-    pub sample_ring: SliceRingImpl<f64>,
-    pub real_input: Vec<f64>,
-    pub complex_input: Vec<Complex<f64>>,
-    pub complex_output: Vec<Complex<f64>>,
+    pub sample_ring: SliceRingImpl<T>,
+    pub real_input: Vec<T>,
+    pub complex_input: Vec<Complex<T>>,
+    pub complex_output: Vec<Complex<T>>,
 }
 
-impl STFT {
+impl<T> STFT<T>
+    where T: FFTnum + FromF64 + num::Float
+{
     pub fn window_type_to_window_vec(window_type: WindowType,
                                      window_size: usize)
-                                     -> Option<Vec<f64>> {
+                                     -> Option<Vec<T>> {
         match window_type {
-            WindowType::Hanning => Some(apodize::hanning_iter(window_size).collect()),
-            WindowType::Hamming => Some(apodize::hamming_iter(window_size).collect()),
-            WindowType::Blackman => Some(apodize::blackman_iter(window_size).collect()),
-            WindowType::Nuttall => Some(apodize::nuttall_iter(window_size).collect()),
+            WindowType::Hanning => Some(apodize::hanning_iter(window_size).map(FromF64::from_f64).collect()),
+            WindowType::Hamming => Some(apodize::hamming_iter(window_size).map(FromF64::from_f64).collect()),
+            WindowType::Blackman => Some(apodize::blackman_iter(window_size).map(FromF64::from_f64).collect()),
+            WindowType::Nuttall => Some(apodize::nuttall_iter(window_size).map(FromF64::from_f64).collect()),
             WindowType::None => None,
         }
     }
@@ -172,7 +176,7 @@ impl STFT {
     }
 
     // TODO this should ideally take an iterator and not a vec
-    pub fn new_with_window_vec(window: Option<Vec<f64>>,
+    pub fn new_with_window_vec(window: Option<Vec<T>>,
                                   window_size: usize,
                                   step_size: usize)
                                   -> Self {
@@ -188,13 +192,13 @@ impl STFT {
             fft: planner.plan_fft(window_size),
             sample_ring: SliceRingImpl::new(),
             window: window,
-            real_input: std::iter::repeat(f64::zero())
+            real_input: std::iter::repeat(T::zero())
                             .take(window_size)
                             .collect(),
-            complex_input: std::iter::repeat(Complex::<f64>::zero())
+            complex_input: std::iter::repeat(Complex::<T>::zero())
                                .take(window_size)
                                .collect(),
-            complex_output: std::iter::repeat(Complex::<f64>::zero())
+            complex_output: std::iter::repeat(Complex::<T>::zero())
                                 .take(window_size)
                                 .collect(),
         }
@@ -210,7 +214,7 @@ impl STFT {
         self.sample_ring.len()
     }
 
-    pub fn append_samples(&mut self, input: &[f64]) {
+    pub fn append_samples(&mut self, input: &[T]) {
         self.sample_ring.push_many_back(input);
     }
 
@@ -243,7 +247,7 @@ impl STFT {
 
     /// # Panics
     /// panics unless `self.output_size() == output.len()`
-    pub fn compute_complex_column(&mut self, output: &mut [Complex<f64>]) {
+    pub fn compute_complex_column(&mut self, output: &mut [Complex<T>]) {
         assert_eq!(self.output_size(), output.len());
 
         self.compute_into_complex_output();
@@ -255,7 +259,7 @@ impl STFT {
 
     /// # Panics
     /// panics unless `self.output_size() == output.len()`
-    pub fn compute_magnitude_column(&mut self, output: &mut [f64]) {
+    pub fn compute_magnitude_column(&mut self, output: &mut [T]) {
         assert_eq!(self.output_size(), output.len());
 
         self.compute_into_complex_output();
@@ -268,7 +272,7 @@ impl STFT {
     /// computes a column of the spectrogram
     /// # Panics
     /// panics unless `self.output_size() == output.len()`
-    pub fn compute_column(&mut self, output: &mut [f64]) {
+    pub fn compute_column(&mut self, output: &mut [T]) {
         assert_eq!(self.output_size(), output.len());
 
         self.compute_into_complex_output();
@@ -283,4 +287,16 @@ impl STFT {
     pub fn move_to_next_column(&mut self) {
         self.sample_ring.drop_many_front(self.step_size);
     }
+}
+
+pub trait FromF64 {
+    fn from_f64(n: f64) -> Self;
+}
+
+impl FromF64 for f64 {
+    fn from_f64(n: f64) -> Self { n }
+}
+
+impl FromF64 for f32 {
+    fn from_f64(n: f64) -> Self { n as f32 }
 }
