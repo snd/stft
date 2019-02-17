@@ -223,7 +223,7 @@ impl<T> STFT<T>
         self.window_size <= self.sample_ring.len()
     }
 
-    fn compute_into_complex_output(&mut self) {
+    pub fn compute_into_complex_output(&mut self) {
         assert!(self.contains_enough_to_compute());
 
         // read into real_input
