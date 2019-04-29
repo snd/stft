@@ -35,7 +35,7 @@ fn test_log10_positive() {
 
 #[test]
 fn test_stft() {
-    let mut stft = STFT::<f64>::new(WindowType::Hanning, 8, 4);
+    let mut stft = STFT::new(WindowType::Hanning, 8, 4);
     assert!(!stft.contains_enough_to_compute());
     assert_eq!(stft.output_size(), 4);
     assert_eq!(stft.len(), 0);

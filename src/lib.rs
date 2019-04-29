@@ -23,7 +23,7 @@ fn main() {
     let window_type: WindowType = WindowType::Hanning;
     let window_size: usize = 1024;
     let step_size: usize = 512;
-    let mut stft = STFT::<f64>::new(window_type, window_size, step_size);
+    let mut stft = STFT::new(window_type, window_size, step_size);
 
     // we need a buffer to hold a computed column of the spectrogram
     let mut spectrogram_column: Vec<f64> =
@@ -60,19 +60,19 @@ fn main() {
 */
 
 use std::str::FromStr;
+use std::sync::Arc;
 
 extern crate num;
 use num::complex::Complex;
-use num::traits::{Float, Signed, FromPrimitive, Zero};
+use num::traits::{Float, Signed, Zero};
 
 extern crate apodize;
-use apodize::CanRepresentPi;
 
 extern crate strider;
 use strider::{SliceRing, SliceRingImpl};
 
 extern crate rustfft;
-use rustfft::FFT;
+use rustfft::{FFT,FFTnum,FFTplanner};
 
 /// returns `0` if `log10(value).is_negative()`.
 /// otherwise returns `log10(value)`.
@@ -141,10 +141,12 @@ impl WindowType {
     }
 }
 
-pub struct STFT<T> {
+pub struct STFT<T>
+    where T: FFTnum + FromF64 + num::Float
+{
     pub window_size: usize,
     pub step_size: usize,
-    pub fft: FFT<T>,
+    pub fft: Arc<FFT<T>>,
     pub window: Option<Vec<T>>,
     /// internal ringbuffer used to store samples
     pub sample_ring: SliceRingImpl<T>,
@@ -153,38 +155,41 @@ pub struct STFT<T> {
     pub complex_output: Vec<Complex<T>>,
 }
 
-impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
+impl<T> STFT<T>
+    where T: FFTnum + FromF64 + num::Float
+{
     pub fn window_type_to_window_vec(window_type: WindowType,
                                      window_size: usize)
                                      -> Option<Vec<T>> {
         match window_type {
-            WindowType::Hanning => Some(apodize::hanning_iter(window_size).collect::<Vec<T>>()),
-            WindowType::Hamming => Some(apodize::hamming_iter(window_size).collect::<Vec<T>>()),
-            WindowType::Blackman => Some(apodize::blackman_iter(window_size).collect::<Vec<T>>()),
-            WindowType::Nuttall => Some(apodize::nuttall_iter(window_size).collect::<Vec<T>>()),
+            WindowType::Hanning => Some(apodize::hanning_iter(window_size).map(FromF64::from_f64).collect()),
+            WindowType::Hamming => Some(apodize::hamming_iter(window_size).map(FromF64::from_f64).collect()),
+            WindowType::Blackman => Some(apodize::blackman_iter(window_size).map(FromF64::from_f64).collect()),
+            WindowType::Nuttall => Some(apodize::nuttall_iter(window_size).map(FromF64::from_f64).collect()),
             WindowType::None => None,
         }
     }
 
-    pub fn new(window_type: WindowType, window_size: usize, step_size: usize) -> STFT<T> {
-        let window = STFT::window_type_to_window_vec(window_type, window_size);
-        STFT::<T>::new_with_window_vec(window, window_size, step_size)
+    pub fn new(window_type: WindowType, window_size: usize, step_size: usize) -> Self {
+        let window = Self::window_type_to_window_vec(window_type, window_size);
+        Self::new_with_window_vec(window, window_size, step_size)
     }
 
     // TODO this should ideally take an iterator and not a vec
     pub fn new_with_window_vec(window: Option<Vec<T>>,
                                   window_size: usize,
                                   step_size: usize)
-                                  -> STFT<T> {
+                                  -> Self {
         // TODO more assertions:
         // window_size is power of two
         // step_size > 0
         assert!(step_size <= window_size);
         let inverse = false;
+        let mut planner = FFTplanner::new(inverse);
         STFT {
             window_size: window_size,
             step_size: step_size,
-            fft: FFT::new(window_size, inverse),
+            fft: planner.plan_fft(window_size),
             sample_ring: SliceRingImpl::new(),
             window: window,
             real_input: std::iter::repeat(T::zero())
@@ -218,7 +223,7 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
         self.window_size <= self.sample_ring.len()
     }
 
-    fn compute_into_complex_output(&mut self) {
+    pub fn compute_into_complex_output(&mut self) {
         assert!(self.contains_enough_to_compute());
 
         // read into real_input
@@ -237,7 +242,7 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
         }
 
         // compute fft
-        self.fft.process(&self.complex_input, &mut self.complex_output);
+        self.fft.process(&mut self.complex_input, &mut self.complex_output);
     }
 
     /// # Panics
@@ -282,4 +287,16 @@ impl<T: Float + Signed + Zero + FromPrimitive + CanRepresentPi> STFT<T> {
     pub fn move_to_next_column(&mut self) {
         self.sample_ring.drop_many_front(self.step_size);
     }
+}
+
+pub trait FromF64 {
+    fn from_f64(n: f64) -> Self;
+}
+
+impl FromF64 for f64 {
+    fn from_f64(n: f64) -> Self { n }
+}
+
+impl FromF64 for f32 {
+    fn from_f64(n: f64) -> Self { n as f32 }
 }

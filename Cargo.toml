@@ -11,7 +11,7 @@ repository = "https://github.com/snd/stft.git"
 version = "0.2.0"
 
 [dependencies]
-apodize = "0.1.1"
-num = "0.1.29"
-rustfft = "1.0.0"
-strider = "0.1.2"
+apodize = "0.3.1"
+num = "0.2.0"
+rustfft = "3.0.0"
+strider = "0.1.3"
