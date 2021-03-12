@@ -13,5 +13,12 @@ version = "0.2.0"
 [dependencies]
 apodize = "0.3.1"
 num = "0.2.0"
-rustfft = "3.0.0"
+rustfft = "3.0.1"
 strider = "0.1.3"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "lib"
+harness = false

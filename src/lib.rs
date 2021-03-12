@@ -146,7 +146,7 @@ pub struct STFT<T>
 {
     pub window_size: usize,
     pub step_size: usize,
-    pub fft: Arc<FFT<T>>,
+    pub fft: Arc<dyn FFT<T>>,
     pub window: Option<Vec<T>>,
     /// internal ringbuffer used to store samples
     pub sample_ring: SliceRingImpl<T>,
