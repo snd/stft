@@ -145,6 +145,7 @@ pub struct STFT<T>
     where T: FFTnum + FromF64 + num::Float
 {
     pub window_size: usize,
+    pub fft_size: usize,
     pub step_size: usize,
     pub fft: Arc<dyn FFT<T>>,
     pub window: Option<Vec<T>>,
@@ -174,34 +175,42 @@ impl<T> STFT<T>
         let window = Self::window_type_to_window_vec(window_type, window_size);
         Self::new_with_window_vec(window, window_size, step_size)
     }
+    
+    pub fn new_with_zero_padding(window_type: WindowType, window_size: usize, fft_size: usize, step_size: usize) -> Self {
+        let window = Self::window_type_to_window_vec(window_type, window_size);
+        Self::new_with_window_vec_and_zero_padding(window, window_size, fft_size, step_size)
+    }
 
     // TODO this should ideally take an iterator and not a vec
-    pub fn new_with_window_vec(window: Option<Vec<T>>,
-                                  window_size: usize,
-                                  step_size: usize)
-                                  -> Self {
-        // TODO more assertions:
-        // window_size is power of two
-        // step_size > 0
-        assert!(step_size <= window_size);
-        let inverse = false;
-        let mut planner = FFTplanner::new(inverse);
+    pub fn new_with_window_vec_and_zero_padding(window:Option<Vec<T>>,
+                                            window_size: usize,
+                                            fft_size: usize,
+                                            step_size: usize) -> Self {
+        assert!(step_size > 0 && step_size < window_size);
+        let mut planner = FFTplanner::new(false);
         STFT {
             window_size: window_size,
+            fft_size: fft_size,
             step_size: step_size,
-            fft: planner.plan_fft(window_size),
+            fft: planner.plan_fft(fft_size),
             sample_ring: SliceRingImpl::new(),
             window: window,
             real_input: std::iter::repeat(T::zero())
-                            .take(window_size)
-                            .collect(),
+                           .take(window_size).collect(),
+            // zero-padded complex_input, so the size is fft_size, not window_size
             complex_input: std::iter::repeat(Complex::<T>::zero())
-                               .take(window_size)
-                               .collect(),
+                                         .take(fft_size).collect(),
+            // same size as complex_output 
             complex_output: std::iter::repeat(Complex::<T>::zero())
-                                .take(window_size)
-                                .collect(),
+                                         .take(fft_size).collect(),
         }
+
+    }
+
+    pub fn new_with_window_vec(window: Option<Vec<T>>,
+                               window_size: usize,
+                               step_size: usize) -> Self {
+        Self::new_with_window_vec_and_zero_padding(window, window_size, window_size, step_size)
     }
 
     #[inline]
@@ -237,7 +246,8 @@ impl<T> STFT<T>
         }
 
         // copy windowed real_input as real parts into complex_input
-        for (dst, src) in self.complex_input.iter_mut().zip(self.real_input.iter()) {
+        // only copy `window_size` size, leave the rest in `complex_input` be zero 
+        for (src, dst) in self.real_input.iter().zip(self.complex_input.iter_mut()) {
             dst.re = src.clone();
         }
 
@@ -286,6 +296,25 @@ impl<T> STFT<T>
     /// drops `self.step_size` samples from the internal buffer `self.sample_ring`.
     pub fn move_to_next_column(&mut self) {
         self.sample_ring.drop_many_front(self.step_size);
+    }
+
+    /// corresponding frequencies of a column of the spectrogram
+    /// # Arguments
+    /// `fs`: sampling frequency.
+    pub fn freqs(&self, fs: f64) -> Vec<f64> {
+        let n_freqs = self.output_size();
+        (0..n_freqs).map(|f| (f as f64) / ((n_freqs - 1) as f64) * (fs / 2.))
+            .collect()
+    }
+
+    /// corresponding time of first columns of the spectrogram
+    pub fn first_time(&self, fs: f64) -> f64 {
+        (self.window_size as f64) / (fs * 2.) 
+    }
+
+    /// time interval between two adjacent columns of the spectrogram
+    pub fn time_interval(&self, fs: f64) -> f64 {
+        (self.step_size as f64) / fs
     }
 }
 
