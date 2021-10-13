@@ -12,7 +12,7 @@ version = "0.3.0"
 edition = "2018"
 
 [dependencies]
-apodize = "0.3.1"
+apodize = "1.0.0"
 num = "0.4.0"
 rustfft = "6.0.1"
 strider = "0.1.3"
