@@ -249,6 +249,11 @@ where
         self.sample_ring.len()
     }
 
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn append_samples(&mut self, input: &[T]) {
         self.sample_ring.push_many_back(input);
     }
@@ -274,7 +279,7 @@ where
         // copy windowed real_input as real parts into complex_input
         // only copy `window_size` size, leave the rest in `complex_input` be zero
         for (src, dst) in self.real_input.iter().zip(self.complex_input.iter_mut()) {
-            dst.re = src.clone();
+            dst.re = *src;
         }
 
         // compute fft
@@ -290,7 +295,7 @@ where
         self.compute_into_complex_output();
 
         for (dst, src) in output.iter_mut().zip(self.complex_output.iter()) {
-            *dst = src.clone();
+            *dst = *src;
         }
     }
 
