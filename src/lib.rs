@@ -9,7 +9,6 @@ to the `[dependencies]` section of your `Cargo.toml` and call `extern crate stft
 ## example
 
 ```
-extern crate stft;
 use stft::{STFT, WindowType};
 
 fn main() {
@@ -59,20 +58,12 @@ fn main() {
 ```
 */
 
-use std::str::FromStr;
-use std::sync::Arc;
-
-extern crate num;
 use num::complex::Complex;
 use num::traits::{Float, Signed, Zero};
-
-extern crate apodize;
-
-extern crate strider;
+use rustfft::{FFTnum, FFTplanner, FFT};
+use std::str::FromStr;
+use std::sync::Arc;
 use strider::{SliceRing, SliceRingImpl};
-
-extern crate rustfft;
-use rustfft::{FFT,FFTnum,FFTplanner};
 
 /// returns `0` if `log10(value).is_negative()`.
 /// otherwise returns `log10(value)`.
@@ -109,7 +100,7 @@ impl FromStr for WindowType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let lower = s.to_lowercase();
-        match &lower[..] {
+        match lower.as_str() {
             "hanning" => Ok(WindowType::Hanning),
             "hann" => Ok(WindowType::Hanning),
             "hamming" => Ok(WindowType::Hamming),
@@ -129,11 +120,13 @@ impl std::fmt::Display for WindowType {
 }
 
 // TODO write a macro that does this automatically for any enum
-static WINDOW_TYPES: [WindowType; 5] = [WindowType::Hanning,
-                                        WindowType::Hamming,
-                                        WindowType::Blackman,
-                                        WindowType::Nuttall,
-                                        WindowType::None];
+static WINDOW_TYPES: [WindowType; 5] = [
+    WindowType::Hanning,
+    WindowType::Hamming,
+    WindowType::Blackman,
+    WindowType::Nuttall,
+    WindowType::None,
+];
 
 impl WindowType {
     pub fn values() -> [WindowType; 5] {
@@ -142,7 +135,8 @@ impl WindowType {
 }
 
 pub struct STFT<T>
-    where T: FFTnum + FromF64 + num::Float
+where
+    T: FFTnum + FromF64 + num::Float,
 {
     pub window_size: usize,
     pub fft_size: usize,
@@ -157,16 +151,34 @@ pub struct STFT<T>
 }
 
 impl<T> STFT<T>
-    where T: FFTnum + FromF64 + num::Float
+where
+    T: FFTnum + FromF64 + num::Float,
 {
-    pub fn window_type_to_window_vec(window_type: WindowType,
-                                     window_size: usize)
-                                     -> Option<Vec<T>> {
+    pub fn window_type_to_window_vec(
+        window_type: WindowType,
+        window_size: usize,
+    ) -> Option<Vec<T>> {
         match window_type {
-            WindowType::Hanning => Some(apodize::hanning_iter(window_size).map(FromF64::from_f64).collect()),
-            WindowType::Hamming => Some(apodize::hamming_iter(window_size).map(FromF64::from_f64).collect()),
-            WindowType::Blackman => Some(apodize::blackman_iter(window_size).map(FromF64::from_f64).collect()),
-            WindowType::Nuttall => Some(apodize::nuttall_iter(window_size).map(FromF64::from_f64).collect()),
+            WindowType::Hanning => Some(
+                apodize::hanning_iter(window_size)
+                    .map(FromF64::from_f64)
+                    .collect(),
+            ),
+            WindowType::Hamming => Some(
+                apodize::hamming_iter(window_size)
+                    .map(FromF64::from_f64)
+                    .collect(),
+            ),
+            WindowType::Blackman => Some(
+                apodize::blackman_iter(window_size)
+                    .map(FromF64::from_f64)
+                    .collect(),
+            ),
+            WindowType::Nuttall => Some(
+                apodize::nuttall_iter(window_size)
+                    .map(FromF64::from_f64)
+                    .collect(),
+            ),
             WindowType::None => None,
         }
     }
@@ -175,41 +187,50 @@ impl<T> STFT<T>
         let window = Self::window_type_to_window_vec(window_type, window_size);
         Self::new_with_window_vec(window, window_size, step_size)
     }
-    
-    pub fn new_with_zero_padding(window_type: WindowType, window_size: usize, fft_size: usize, step_size: usize) -> Self {
+
+    pub fn new_with_zero_padding(
+        window_type: WindowType,
+        window_size: usize,
+        fft_size: usize,
+        step_size: usize,
+    ) -> Self {
         let window = Self::window_type_to_window_vec(window_type, window_size);
         Self::new_with_window_vec_and_zero_padding(window, window_size, fft_size, step_size)
     }
 
     // TODO this should ideally take an iterator and not a vec
-    pub fn new_with_window_vec_and_zero_padding(window:Option<Vec<T>>,
-                                            window_size: usize,
-                                            fft_size: usize,
-                                            step_size: usize) -> Self {
+    pub fn new_with_window_vec_and_zero_padding(
+        window: Option<Vec<T>>,
+        window_size: usize,
+        fft_size: usize,
+        step_size: usize,
+    ) -> Self {
         assert!(step_size > 0 && step_size < window_size);
         let mut planner = FFTplanner::new(false);
         STFT {
-            window_size: window_size,
-            fft_size: fft_size,
-            step_size: step_size,
+            window_size,
+            fft_size,
+            step_size,
             fft: planner.plan_fft(fft_size),
             sample_ring: SliceRingImpl::new(),
-            window: window,
-            real_input: std::iter::repeat(T::zero())
-                           .take(window_size).collect(),
+            window,
+            real_input: std::iter::repeat(T::zero()).take(window_size).collect(),
             // zero-padded complex_input, so the size is fft_size, not window_size
             complex_input: std::iter::repeat(Complex::<T>::zero())
-                                         .take(fft_size).collect(),
-            // same size as complex_output 
+                .take(fft_size)
+                .collect(),
+            // same size as complex_output
             complex_output: std::iter::repeat(Complex::<T>::zero())
-                                         .take(fft_size).collect(),
+                .take(fft_size)
+                .collect(),
         }
-
     }
 
-    pub fn new_with_window_vec(window: Option<Vec<T>>,
-                               window_size: usize,
-                               step_size: usize) -> Self {
+    pub fn new_with_window_vec(
+        window: Option<Vec<T>>,
+        window_size: usize,
+        step_size: usize,
+    ) -> Self {
         Self::new_with_window_vec_and_zero_padding(window, window_size, window_size, step_size)
     }
 
@@ -246,13 +267,14 @@ impl<T> STFT<T>
         }
 
         // copy windowed real_input as real parts into complex_input
-        // only copy `window_size` size, leave the rest in `complex_input` be zero 
+        // only copy `window_size` size, leave the rest in `complex_input` be zero
         for (src, dst) in self.real_input.iter().zip(self.complex_input.iter_mut()) {
             dst.re = src.clone();
         }
 
         // compute fft
-        self.fft.process(&mut self.complex_input, &mut self.complex_output);
+        self.fft
+            .process(&mut self.complex_input, &mut self.complex_output);
     }
 
     /// # Panics
@@ -303,13 +325,14 @@ impl<T> STFT<T>
     /// `fs`: sampling frequency.
     pub fn freqs(&self, fs: f64) -> Vec<f64> {
         let n_freqs = self.output_size();
-        (0..n_freqs).map(|f| (f as f64) / ((n_freqs - 1) as f64) * (fs / 2.))
+        (0..n_freqs)
+            .map(|f| (f as f64) / ((n_freqs - 1) as f64) * (fs / 2.))
             .collect()
     }
 
     /// corresponding time of first columns of the spectrogram
     pub fn first_time(&self, fs: f64) -> f64 {
-        (self.window_size as f64) / (fs * 2.) 
+        (self.window_size as f64) / (fs * 2.)
     }
 
     /// time interval between two adjacent columns of the spectrogram
@@ -323,9 +346,13 @@ pub trait FromF64 {
 }
 
 impl FromF64 for f64 {
-    fn from_f64(n: f64) -> Self { n }
+    fn from_f64(n: f64) -> Self {
+        n
+    }
 }
 
 impl FromF64 for f32 {
-    fn from_f64(n: f64) -> Self { n as f32 }
+    fn from_f64(n: f64) -> Self {
+        n as f32
+    }
 }
