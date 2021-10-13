@@ -42,7 +42,8 @@ criterion_group!(
 
 macro_rules! bench_stft_compute {
     ($c:expr, $window_size:expr, $float:ty) => {{
-        let mut stft = STFT::<$float>::new(WindowType::Hanning, $window_size, 0);
+        let step_size: usize = 512;
+        let mut stft = STFT::<$float>::new(WindowType::Hanning, $window_size, step_size);
         let input = std::iter::repeat(1.)
             .take($window_size)
             .collect::<Vec<$float>>();
