@@ -60,7 +60,7 @@ fn main() {
 
 use num::complex::Complex;
 use num::traits::{Float, Signed, Zero};
-use rustfft::{FFTnum, FFTplanner, FFT};
+use rustfft::{Fft, FftDirection, FftNum, FftPlanner};
 use std::str::FromStr;
 use std::sync::Arc;
 use strider::{SliceRing, SliceRingImpl};
@@ -136,23 +136,24 @@ impl WindowType {
 
 pub struct STFT<T>
 where
-    T: FFTnum + FromF64 + num::Float,
+    T: FftNum + FromF64 + num::Float,
 {
     pub window_size: usize,
     pub fft_size: usize,
     pub step_size: usize,
-    pub fft: Arc<dyn FFT<T>>,
+    pub fft: Arc<dyn Fft<T>>,
     pub window: Option<Vec<T>>,
     /// internal ringbuffer used to store samples
     pub sample_ring: SliceRingImpl<T>,
     pub real_input: Vec<T>,
     pub complex_input: Vec<Complex<T>>,
     pub complex_output: Vec<Complex<T>>,
+    fft_scratch: Vec<Complex<T>>,
 }
 
 impl<T> STFT<T>
 where
-    T: FFTnum + FromF64 + num::Float,
+    T: FftNum + FromF64 + num::Float,
 {
     pub fn window_type_to_window_vec(
         window_type: WindowType,
@@ -206,12 +207,18 @@ where
         step_size: usize,
     ) -> Self {
         assert!(step_size > 0 && step_size < window_size);
-        let mut planner = FFTplanner::new(false);
+        let fft = FftPlanner::new().plan_fft(fft_size, FftDirection::Forward);
+
+        // allocate a scratch buffer for the FFT
+        let scratch_len = fft.get_inplace_scratch_len();
+        let fft_scratch = vec![Complex::<T>::zero(); scratch_len];
+
         STFT {
             window_size,
             fft_size,
             step_size,
-            fft: planner.plan_fft(fft_size),
+            fft,
+            fft_scratch,
             sample_ring: SliceRingImpl::new(),
             window,
             real_input: std::iter::repeat(T::zero()).take(window_size).collect(),
@@ -274,7 +281,7 @@ where
 
         // compute fft
         self.fft
-            .process(&mut self.complex_input, &mut self.complex_output);
+            .process_with_scratch(&mut self.complex_output, &mut self.fft_scratch)
     }
 
     /// # Panics

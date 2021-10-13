@@ -1,16 +1,13 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use num::complex::Complex;
-use rustfft::FFTplanner;
+use rustfft::{FftDirection, FftPlanner};
 use stft::{WindowType, STFT};
 
 macro_rules! bench_fft_process {
     ($c:expr, $window_size:expr, $float:ty) => {{
-        let inverse = false;
-        let mut planner = FFTplanner::new(inverse);
-        let fft = planner.plan_fft($window_size);
-        let mut input = std::iter::repeat(Complex::new(0., 0.))
-            .take($window_size)
-            .collect::<Vec<Complex<$float>>>();
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft($window_size, FftDirection::Forward);
+        // input is processed in-place
         let mut output = std::iter::repeat(Complex::new(0., 0.))
             .take($window_size)
             .collect::<Vec<Complex<$float>>>();
@@ -21,7 +18,7 @@ macro_rules! bench_fft_process {
                 "_",
                 stringify!($float)
             ),
-            |b| b.iter(|| fft.process(&mut input[..], &mut output[..])),
+            |b| b.iter(|| fft.process(&mut output[..])),
         );
     }};
 }
