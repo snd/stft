@@ -144,8 +144,7 @@ where
     /// internal ringbuffer used to store samples
     pub sample_ring: SliceRingImpl<T>,
     pub real_input: Vec<T>,
-    pub complex_input: Vec<Complex<T>>,
-    pub complex_output: Vec<Complex<T>>,
+    pub complex_input_output: Vec<Complex<T>>,
     fft_scratch: Vec<Complex<T>>,
 }
 
@@ -221,13 +220,10 @@ where
             window,
             real_input: std::iter::repeat(T::zero()).take(window_size).collect(),
             // zero-padded complex_input, so the size is fft_size, not window_size
-            complex_input: std::iter::repeat(Complex::<T>::zero())
+            complex_input_output: std::iter::repeat(Complex::<T>::zero())
                 .take(fft_size)
                 .collect(),
             // same size as complex_output
-            complex_output: std::iter::repeat(Complex::<T>::zero())
-                .take(fft_size)
-                .collect(),
         }
     }
 
@@ -267,7 +263,7 @@ where
         assert!(self.contains_enough_to_compute());
 
         // read into real_input
-        self.sample_ring.read_many_front(&mut self.real_input[..]);
+        self.sample_ring.read_many_front(&mut self.real_input);
 
         // multiply real_input with window
         if let Some(ref window) = self.window {
@@ -278,13 +274,26 @@ where
 
         // copy windowed real_input as real parts into complex_input
         // only copy `window_size` size, leave the rest in `complex_input` be zero
-        for (src, dst) in self.real_input.iter().zip(self.complex_input.iter_mut()) {
+        for (src, dst) in self
+            .real_input
+            .iter()
+            .zip(self.complex_input_output.iter_mut())
+        {
             dst.re = *src;
+            dst.im = T::zero();
+        }
+
+        // ensure the buffer is indeed zero-padded when needed.
+        if self.window_size < self.fft_size {
+            for dst in self.complex_input_output.iter_mut().skip(self.window_size) {
+                dst.re = T::zero();
+                dst.im = T::zero();
+            }
         }
 
         // compute fft
         self.fft
-            .process_with_scratch(&mut self.complex_output, &mut self.fft_scratch)
+            .process_with_scratch(&mut self.complex_input_output, &mut self.fft_scratch)
     }
 
     /// # Panics
@@ -294,7 +303,7 @@ where
 
         self.compute_into_complex_output();
 
-        for (dst, src) in output.iter_mut().zip(self.complex_output.iter()) {
+        for (dst, src) in output.iter_mut().zip(self.complex_input_output.iter()) {
             *dst = *src;
         }
     }
@@ -306,7 +315,7 @@ where
 
         self.compute_into_complex_output();
 
-        for (dst, src) in output.iter_mut().zip(self.complex_output.iter()) {
+        for (dst, src) in output.iter_mut().zip(self.complex_input_output.iter()) {
             *dst = src.norm();
         }
     }
@@ -319,7 +328,7 @@ where
 
         self.compute_into_complex_output();
 
-        for (dst, src) in output.iter_mut().zip(self.complex_output.iter()) {
+        for (dst, src) in output.iter_mut().zip(self.complex_input_output.iter()) {
             *dst = log10_positive(src.norm());
         }
     }
