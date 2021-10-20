@@ -241,7 +241,7 @@ where
 
     #[inline]
     pub fn output_size(&self) -> usize {
-        self.window_size / 2
+        self.fft_size / 2
     }
 
     #[inline]

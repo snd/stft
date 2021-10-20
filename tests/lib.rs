@@ -64,3 +64,24 @@ fn test_stft() {
     stft.compute_column(&mut output[..]);
     println!("{:?}", output);
 }
+
+#[test]
+fn test_stft_padded() {
+    let mut stft = STFT::new_with_zero_padding(WindowType::Hanning, 8, 32, 4);
+    assert!(!stft.contains_enough_to_compute());
+    assert_eq!(stft.output_size(), 16);
+    assert_eq!(stft.len(), 0);
+    stft.append_samples(&vec![500., 0., 100.][..]);
+    assert_eq!(stft.len(), 3);
+    assert!(!stft.contains_enough_to_compute());
+    stft.append_samples(&vec![500., 0., 100., 0.][..]);
+    assert_eq!(stft.len(), 7);
+    assert!(!stft.contains_enough_to_compute());
+
+    stft.append_samples(&vec![500.][..]);
+    assert!(stft.contains_enough_to_compute());
+
+    let mut output: Vec<f64> = vec![0.; 16];
+    stft.compute_column(&mut output[..]);
+    println!("{:?}", output);
+}
