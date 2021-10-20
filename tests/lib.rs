@@ -1,3 +1,4 @@
+use approx::assert_ulps_eq;
 use std::str::FromStr;
 use stft::{WindowType, STFT};
 
@@ -63,6 +64,19 @@ fn test_stft() {
     let mut output: Vec<f64> = vec![0.; 4];
     stft.compute_column(&mut output);
     println!("{:?}", output);
+
+    let expected = vec![
+        2.7763337740785166,
+        2.7149781042402594,
+        2.6218024907053796,
+        2.647816050270838,
+    ];
+    assert_ulps_eq!(output.as_slice(), expected.as_slice(), max_ulps = 10);
+
+    // repeat the calculation to ensure results are independent of the internal buffer
+    let mut output2: Vec<f64> = vec![0.; 4];
+    stft.compute_column(&mut output2);
+    assert_ulps_eq!(output.as_slice(), output2.as_slice(), max_ulps = 10);
 }
 
 #[test]
@@ -84,4 +98,29 @@ fn test_stft_padded() {
     let mut output: Vec<f64> = vec![0.; 16];
     stft.compute_column(&mut output);
     println!("{:?}", output);
+
+    let expected = vec![
+        2.7763337740785166,
+        2.772158781619449,
+        2.7598791705720664,
+        2.740299218211912,
+        2.7149781042402594,
+        2.686495897766628,
+        2.6585877421915676,
+        2.635728083951981,
+        2.6218024907053796,
+        2.6183544930578027,
+        2.6238833073831658,
+        2.634925941918913,
+        2.647816050270838,
+        2.65977332745612,
+        2.6691025866822033,
+        2.6749381613735683,
+    ];
+    assert_ulps_eq!(output.as_slice(), expected.as_slice(), max_ulps = 10);
+
+    // repeat the calculation to ensure results are independent of the internal buffer
+    let mut output2: Vec<f64> = vec![0.; 16];
+    stft.compute_column(&mut output2);
+    assert_ulps_eq!(output.as_slice(), output2.as_slice(), max_ulps = 10);
 }
