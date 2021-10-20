@@ -50,18 +50,18 @@ fn test_stft() {
     assert!(!stft.contains_enough_to_compute());
     assert_eq!(stft.output_size(), 4);
     assert_eq!(stft.len(), 0);
-    stft.append_samples(&vec![500., 0., 100.][..]);
+    stft.append_samples(&[500., 0., 100.]);
     assert_eq!(stft.len(), 3);
     assert!(!stft.contains_enough_to_compute());
-    stft.append_samples(&vec![500., 0., 100., 0.][..]);
+    stft.append_samples(&[500., 0., 100., 0.]);
     assert_eq!(stft.len(), 7);
     assert!(!stft.contains_enough_to_compute());
 
-    stft.append_samples(&vec![500.][..]);
+    stft.append_samples(&[500.]);
     assert!(stft.contains_enough_to_compute());
 
     let mut output: Vec<f64> = vec![0.; 4];
-    stft.compute_column(&mut output[..]);
+    stft.compute_column(&mut output);
     println!("{:?}", output);
 }
 
@@ -71,17 +71,17 @@ fn test_stft_padded() {
     assert!(!stft.contains_enough_to_compute());
     assert_eq!(stft.output_size(), 16);
     assert_eq!(stft.len(), 0);
-    stft.append_samples(&vec![500., 0., 100.][..]);
+    stft.append_samples(&[500., 0., 100.]);
     assert_eq!(stft.len(), 3);
     assert!(!stft.contains_enough_to_compute());
-    stft.append_samples(&vec![500., 0., 100., 0.][..]);
+    stft.append_samples(&[500., 0., 100., 0.]);
     assert_eq!(stft.len(), 7);
     assert!(!stft.contains_enough_to_compute());
 
-    stft.append_samples(&vec![500.][..]);
+    stft.append_samples(&[500.]);
     assert!(stft.contains_enough_to_compute());
 
     let mut output: Vec<f64> = vec![0.; 16];
-    stft.compute_column(&mut output[..]);
+    stft.compute_column(&mut output);
     println!("{:?}", output);
 }
